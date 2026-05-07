@@ -8,7 +8,12 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
+
 """
+
+from decouple import config
+
+from datetime import timedelta
 
 from pathlib import Path
 
@@ -37,6 +42,27 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    #Configuration de swagger
+     "rest_framework",
+    "drf_spectacular",
+    "corsheaders",
+    "drf_spectacular_sidecar",
+
+    # configuration de l'authentification 
+     "rest_framework_simplejwt",
+
+     # Local apps
+    "apps.authentication",
+    "apps.sync",
+    "apps.campaigns",
+    "apps.evaluations",
+    "apps.attendance",
+    "apps.analytics",
+    "apps.ai_engine",
+    "apps.notifications",
+    "apps.reports",
+    "apps.audit",
 ]
 
 MIDDLEWARE = [
@@ -73,12 +99,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": config("DB_HOST"),
+        "PORT": config("DB_PORT", default="5432"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -115,3 +144,33 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+#Ajouter par Benjamin pour la configuration de swagger
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Edu-Eval API",
+    "DESCRIPTION": "API backend pour la plateforme d’évaluation des enseignants.",
+    "VERSION": "1.0.0",
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+}
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+
+#gestion d'authentification 
+AUTH_USER_MODEL = "authentication.User"
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}

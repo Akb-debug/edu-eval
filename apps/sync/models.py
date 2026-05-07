@@ -1,22 +1,29 @@
 import uuid
-from django.db import models
+
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
 
 
-class Department(models.Model):
+class TimeStampedSyncModel(models.Model):
     """
-    Département / filière venant de l'ERP simulé.
-    Exemple : Génie Logiciel, Réseaux, IA, etc.
+    Base commune pour les tables ERP simulées.
+    Compatible avec loaddata/fixtures.
     """
 
+    synced_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        abstract = True
+
+
+class Department(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=30, unique=True)
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
-
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "sync_departments"
@@ -26,21 +33,13 @@ class Department(models.Model):
         return f"{self.code} - {self.name}"
 
 
-class AcademicSemester(models.Model):
-    """
-    Semestre académique venant de l'ERP simulé.
-    Exemple : Semestre 1 - 2025/2026.
-    """
-
+class AcademicSemester(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     academic_year = models.CharField(max_length=20)
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=False)
-
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "sync_academic_semesters"
@@ -54,12 +53,7 @@ class AcademicSemester(models.Model):
         return f"{self.name} ({self.academic_year})"
 
 
-class TeacherSync(models.Model):
-    """
-    Enseignant synchronisé depuis l'ERP simulé.
-    Ces données représentent la source officielle côté école.
-    """
-
+class TeacherSync(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     university_id = models.CharField(max_length=80, unique=True)
     matricule = models.CharField(max_length=80, unique=True)
@@ -79,8 +73,6 @@ class TeacherSync(models.Model):
     specialty = models.CharField(max_length=150, blank=True, null=True)
 
     is_active = models.BooleanField(default=True)
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "sync_teachers"
@@ -99,11 +91,7 @@ class TeacherSync(models.Model):
         return f"{self.full_name} - {self.matricule}"
 
 
-class StudentSync(models.Model):
-    """
-    Étudiant synchronisé depuis l'ERP simulé.
-    """
-
+class StudentSync(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     university_id = models.CharField(max_length=80, unique=True)
     student_code = models.CharField(max_length=80, unique=True)
@@ -123,8 +111,6 @@ class StudentSync(models.Model):
     cohort = models.CharField(max_length=80)
 
     is_active = models.BooleanField(default=True)
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "sync_students"
@@ -144,12 +130,7 @@ class StudentSync(models.Model):
         return f"{self.full_name} - {self.student_code}"
 
 
-class CourseSync(models.Model):
-    """
-    Cours / module venant de l'ERP simulé.
-    Un cours est affecté à un enseignant pour un semestre.
-    """
-
+class CourseSync(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     university_id = models.CharField(max_length=80, unique=True)
 
@@ -180,8 +161,6 @@ class CourseSync(models.Model):
     credit = models.PositiveIntegerField(default=0)
 
     is_active = models.BooleanField(default=True)
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "sync_courses"
@@ -198,12 +177,7 @@ class CourseSync(models.Model):
         return f"{self.code} - {self.name}"
 
 
-class StudentCourseEnrollment(models.Model):
-    """
-    Inscription d'un étudiant à un cours.
-    C'est ce modèle qui permettra de savoir si un étudiant peut évaluer un enseignant.
-    """
-
+class StudentCourseEnrollment(TimeStampedSyncModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     student = models.ForeignKey(
@@ -225,8 +199,7 @@ class StudentCourseEnrollment(models.Model):
     )
 
     is_active = models.BooleanField(default=True)
-    enrolled_at = models.DateTimeField(auto_now_add=True)
-    synced_at = models.DateTimeField(auto_now=True)
+    enrolled_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = "sync_student_course_enrollments"
@@ -247,11 +220,6 @@ class StudentCourseEnrollment(models.Model):
 
 
 class SyncLog(models.Model):
-    """
-    Journal des synchronisations ERP simulées.
-    Même si on simule l'ERP, ce log donne une trace professionnelle des imports.
-    """
-
     class SyncType(models.TextChoices):
         FULL = "FULL", "Synchronisation complète"
         PARTIAL = "PARTIAL", "Synchronisation partielle"
@@ -264,8 +232,16 @@ class SyncLog(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    sync_type = models.CharField(max_length=20, choices=SyncType.choices, default=SyncType.MANUAL)
-    status = models.CharField(max_length=20, choices=SyncStatus.choices, default=SyncStatus.SUCCESS)
+    sync_type = models.CharField(
+        max_length=20,
+        choices=SyncType.choices,
+        default=SyncType.MANUAL,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=SyncStatus.choices,
+        default=SyncStatus.SUCCESS,
+    )
 
     teachers_count = models.PositiveIntegerField(default=0)
     students_count = models.PositiveIntegerField(default=0)
@@ -275,7 +251,7 @@ class SyncLog(models.Model):
     message = models.TextField(blank=True, null=True)
     errors = models.JSONField(blank=True, null=True)
 
-    started_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(default=timezone.now)
     ended_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
