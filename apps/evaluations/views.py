@@ -28,7 +28,8 @@ from .serializers import MyEvaluableCourseSerializer
 class EvaluationCriteriaViewSet(viewsets.ModelViewSet):
     queryset = EvaluationCriteria.objects.all()
     serializer_class = EvaluationCriteriaSerializer
-    permission_classes = [IsAdminOrDirector]
+    #permission_classes = [IsAdminOrDirector]
+    permission_classes = [IsAuthenticated]
 
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
@@ -44,6 +45,11 @@ class EvaluationCriteriaViewSet(viewsets.ModelViewSet):
     ]
     ordering = ["category", "name"]
 
+    def get_permissions(self):
+        # Lecture pour tous, écriture pour admin seulement
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrDirector()]
+        return [IsAuthenticated()]
 
 class EvaluationSubmissionViewSet(viewsets.ModelViewSet):
     queryset = EvaluationSubmission.objects.select_related(

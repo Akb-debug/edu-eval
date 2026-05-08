@@ -10,6 +10,6 @@ urlpatterns = [
 
     path("api/sync/", include("apps.sync.urls")),
     path("api/auth/", include("apps.authentication.urls")),
-    path("api/campaigns", include("apps.campaigns.urls")),
+    path("api/campaigns/", include("apps.campaigns.urls")),
     path("api/evaluations/", include("apps.evaluations.urls")),
 ]
